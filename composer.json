@@ -1,0 +1,6 @@
+{
+    "require": {
+        "firebase/php-jwt": "^5.4",
+        "phpseclib/phpseclib": "^3.0"
+    }
+}
