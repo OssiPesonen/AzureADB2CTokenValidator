@@ -13,5 +13,5 @@ Very simple. Firebase's JWT package already verifies the token's signature again
 
 ## Due note
 
-The public key rotates nearly every 24 hours. It's highly recommended to cache the key and use that if the `kid` value hasn't changed. Otherwise you can update the key and cache it again for 24 hours.
+The public keys in Azure rotate every 24 hours. It's highly recommended to cache the key nearby and use that if the `kid` (key id) value hasn't changed. Otherwise you can update the key and cache it again for 24 hours.
 
