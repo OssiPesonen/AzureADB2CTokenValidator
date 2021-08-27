@@ -1,6 +1,23 @@
 {
-    "require": {
-        "firebase/php-jwt": "^5.4",
-        "phpseclib/phpseclib": "^3.0"
+    "name": "ossipesonen/azureadb2ctokenvalidator",
+    "description": "Simple Azure AD B2C access token validator",
+    "type": "library",
+    "license": "proprietary",
+    "autoload": {
+        "psr-4": {
+            "AzureADB2CTokenValidator\\": "src/"
+        },
+        "authors": [
+            {
+                "name": "Ossi Pesonen",
+                "email": "ossi@ossipesonen.fi"
+            }
+        ],
+        "minimum-stability": "dev",
+        "require": {
+            "php": ">=7.1",
+            "firebase/php-jwt": "^5.4",
+            "phpseclib/phpseclib": "^3.0"
+        }
     }
 }
