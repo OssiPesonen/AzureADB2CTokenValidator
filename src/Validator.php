@@ -34,11 +34,15 @@ class Validator implements ValidatorInterface
     /** @var string Azure AD B2C App Client ID */
     private $clientId;
 
+    /** @var PublicKey Public key containing the kid, modulus, exponent etc. */
+    private $publicKey;
+
     public function __construct(string $tenant, string $policy, string $clientId)
     {
         $this->policy = $policy;
         $this->clientId = $clientId;
         $this->tenant = strtolower($tenant);
+        $this->publicKey = null;
     }
 
     /**
@@ -149,7 +153,20 @@ class Validator implements ValidatorInterface
             }
         }
 
-        return $keys[$kid] ? new PublicKey((array)$keys[$kid]) : null;
+        if ($keys[$kid]) {
+            $this->publicKey = new PublicKey((array)$keys[$kid]);
+        }
+
+        return $this->publicKey;
+    }
+
+    /**
+     * Return public key object
+     *
+     * @return PublicKey|null
+     */
+    public function getPublicKey(): ?PublicKey {
+        return $this->publicKey;
     }
 
     /**
