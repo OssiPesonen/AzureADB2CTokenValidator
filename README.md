@@ -45,3 +45,28 @@ if ($kid === $cachedKey->kid) {
     $claims = $this->validateToken($accessToken, $cachedKey);
 }
 ```
+
+As an example, here's how you could use a local directory to store the keys (they are public, so no need to fear):
+
+```php
+$validator = new AzureADB2CTokenValidator\Validator("tenant", "B2C_1_SignUpSignIn", "ClientId");
+
+$kid = $validator->getAccessTokenKid($jwt);
+$cachedKid = null;
+$cachePath = CACHE_PATH . 'auth-token-kid';
+
+if (file_exists($cachePath)) {
+    /** @var string $cachedKid */
+    $cachedKid = file_get_contents($cachePath);
+
+    if ($cachedKid) {
+        $cachedKid = json_decode($cachedKid);
+    }
+}
+
+$claims = $validator->validateToken($jwt, ($kid === $cachedKid->kid ? new AzureADB2CTokenValidator\PublicKey((array)$cachedKid) : null));
+
+if ($validator->getPublicKey()) {
+    file_put_contents($cachePath, json_encode((array)$validator->getPublicKey()));
+}
+```
