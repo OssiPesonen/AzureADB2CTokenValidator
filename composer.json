@@ -2,7 +2,7 @@
     "name": "ossipesonen/azureadb2ctokenvalidator",
     "description": "Simple Azure AD B2C access token validator",
     "type": "library",
-    "license": "proprietary",
+    "license": "MIT",
     "autoload": {
         "psr-4": {
             "AzureADB2CTokenValidator\\": "src/"
