@@ -1,6 +1,6 @@
 # AzureADB2CTokenValidator
 
-A simple implementation of Azure AD B2C token validation with PHP. The trick with AD B2C is to fetch the open ID configuration calculate a public key with the modulus and exponent. For this we use the PublicKeyLoader from phpseclib3. 
+A simple implementation of Azure AD B2C token validation with PHP. The trick with AD B2C is to fetch your tenant keys to calculate a public key with the modulus and exponent. For this we use the PublicKeyLoader from phpseclib3. 
 
 ## Requirements
 
