@@ -37,6 +37,11 @@ class Validator implements ValidatorInterface
     /** @var PublicKey Public key containing the kid, modulus, exponent etc. */
     private $publicKey;
 
+    /**
+     * @var int Leeway given for JWT to correct possible errors in having Azure tokens not match server time
+     */
+    public static $leeway = 0;
+
     public function __construct(string $tenant, string $policy, string $clientId)
     {
         $this->policy = $policy;
@@ -124,6 +129,12 @@ class Validator implements ValidatorInterface
         }
 
         $publicKey = $this->generatePublicKeyFromModulusAndExponent($key->n, $key->e);
+
+        # Set a bit of leeway
+        if (self::$leeway !== 0) {
+            JWT::$leeway = self::$leeway;
+        }
+
         $claims = (array)JWT::decode($accessToken, $publicKey, [$headerPayload->alg]);
         $this->validateTokenClaims($claims);
 
@@ -165,7 +176,8 @@ class Validator implements ValidatorInterface
      *
      * @return PublicKey|null
      */
-    public function getPublicKey(): ?PublicKey {
+    public function getPublicKey(): ?PublicKey
+    {
         return $this->publicKey;
     }
 
