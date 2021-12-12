@@ -3,6 +3,7 @@
 namespace AzureADB2CTokenValidator;
 
 use AzureADB2CTokenValidator\Exceptions\InvalidClaimException;
+use AzureADB2CTokenValidator\Exceptions\MissingResponseException;
 use Exception;
 use Firebase\JWT\JWT;
 use phpseclib3\Crypt\PublicKeyLoader;
@@ -20,34 +21,36 @@ use AzureADB2CTokenValidator\Exceptions\InvalidKidException;
 class Validator implements ValidatorInterface
 {
     /** @var array Open ID Connect metadata document */
-    protected $openIdConfiguration;
+    protected array $openIdConfiguration;
 
     /** @var string Azure AD B2C Tenant name found in domain (tenant.onmicrosoft.com) */
-    public $tenant;
+    public string $tenant;
 
     /** @var string User flow name */
-    private $policy;
+    private string $policy;
 
     /** @var string Default Open ID Connect version */
-    public $defaultEndPointVersion = '2.0';
+    public string $defaultEndPointVersion = '2.0';
 
     /** @var string Azure AD B2C App Client ID */
-    private $clientId;
+    private string $clientId;
 
-    /** @var PublicKey Public key containing the kid, modulus, exponent etc. */
-    private $publicKey;
+    /** @var ?PublicKey $publicKey Public key containing the kid, modulus, exponent etc. */
+    private ?PublicKey $publicKey;
 
-    /**
-     * @var int Leeway given for JWT to correct possible errors in having Azure tokens not match server time
-     */
+    /** @var int Leeway given for JWT to correct possible errors in having Azure tokens not match server time */
     public static $leeway = 0;
 
-    public function __construct(string $tenant, string $policy, string $clientId)
+    /** @var File */
+    private File $file;
+
+    public function __construct(string $tenant, string $policy, string $clientId, ?File $file)
     {
         $this->policy = $policy;
         $this->clientId = $clientId;
         $this->tenant = strtolower($tenant);
         $this->publicKey = null;
+        $this->file = $file ?? File::getInstance();
     }
 
     /**
@@ -79,8 +82,9 @@ class Validator implements ValidatorInterface
      *
      * @param string $tenant
      * @return mixed
+     * @throws MissingResponseException
      */
-    public function getTenantDetails(string $tenant)
+    private function getTenantDetails(string $tenant)
     {
         return $this->getOpenIdConfiguration($tenant, $this->defaultEndPointVersion);
     }
@@ -89,9 +93,9 @@ class Validator implements ValidatorInterface
      * Get access token header payload
      *
      * @param string $accessToken
-     * @return mixed
+     * @return object
      */
-    public function getAccessTokenHeader(string $accessToken)
+    public function getAccessTokenHeader(string $accessToken): object
     {
         list($header, ,) = explode('.', $accessToken);
         return json_decode(base64_decode($header));
@@ -101,11 +105,12 @@ class Validator implements ValidatorInterface
      * Return the key ID used to sign this access token
      *
      * @param string $accessToken
-     * @return mixed
+     * @return string|null
      */
-    public function getAccessTokenKid(string $accessToken)
+    public function getAccessTokenKid(string $accessToken): ?string
     {
-        return $this->getAccessTokenHeader($accessToken)->kid;
+        $headers = $this->getAccessTokenHeader($accessToken);
+        return $headers->kid ?? null;
     }
 
     /**
@@ -113,7 +118,7 @@ class Validator implements ValidatorInterface
      *
      * @param string $accessToken Json Web Token
      * @return array Access token claims ie. aud, iss, exp etc.
-     * @throws Exception
+     * @throws MissingResponseException|Exception
      */
     public function validateToken(string $accessToken, PublicKey $key = null): array
     {
@@ -146,17 +151,12 @@ class Validator implements ValidatorInterface
      *
      * @param string $kid
      * @return PublicKey|null
+     * @throws MissingResponseException
      */
     private function getJwtVerificationKey(string $kid): ?PublicKey
     {
         $keys = [];
-        $discoveredKeys = file_get_contents($this->getDiscoveryUrl());
-
-        if (!$discoveredKeys) {
-            throw new Exception("Invalid tenant information provided");
-        }
-
-        $discoveredKeys = json_decode($discoveredKeys);
+        $discoveredKeys = $this->file->request($this->getDiscoveryUrl());
 
         if (is_array($discoveredKeys->keys)) {
             foreach ($discoveredKeys->keys as $key) {
@@ -221,9 +221,15 @@ class Validator implements ValidatorInterface
             throw new InvalidClaimException('The client_id or audience is invalid');
         }
 
-        if ($tokenClaims['nbf'] > time() || $tokenClaims['exp'] < time()) {
-            // Additional validation is being performed in firebase/JWT itself
-            throw new InvalidClaimException('The id_token is invalid');
+        // Additional validation is being performed in firebase/JWT itself
+        if ($tokenClaims['nbf'] > (time() - self::$leeway)) {
+            throw new InvalidClaimException('The id_token is not valid yet. Validity begins ' . date('Y-m-d H:i:s',
+                    $tokenClaims['nbf'] . '. Time now ' . date('Y-m-d H:i:s', time())));
+        }
+
+        if ($tokenClaims['exp'] < (time() + self::$leeway)) {
+            throw new InvalidClaimException('The id_token has expired. Token has expired at ' . date('Y-m-d H:i:s',
+                    $tokenClaims['exp'] . '. Time now ' . date('Y-m-d H:i:s', time())));
         }
 
         $tenant = $this->getTenantDetails($this->tenant);
@@ -239,6 +245,8 @@ class Validator implements ValidatorInterface
      * @param string $tenant
      * @param string $version
      * @return mixed
+     *
+     * @throws MissingResponseException
      */
     protected function getOpenIdConfiguration(string $tenant, string $version)
     {
@@ -252,8 +260,7 @@ class Validator implements ValidatorInterface
 
         if (!array_key_exists($version, $this->openIdConfiguration[$tenant])) {
             $openIdConfigurationUri = $this->getOpenIdConfigurationUrl($version);
-            $request = file_get_contents($openIdConfigurationUri);
-            $response = json_decode($request);
+            $response = $this->file->request($openIdConfigurationUri);
             $this->openIdConfiguration[$tenant][$version] = $response;
         }
 

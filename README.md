@@ -70,3 +70,9 @@ if ($validator->getPublicKey()) {
     file_put_contents($cachePath, json_encode((array)$validator->getPublicKey()));
 }
 ```
+
+## Tests
+
+Unit tests can be run with Pest:
+
+    composer run test

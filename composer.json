@@ -14,10 +14,16 @@
             "email": "ossi@ossipesonen.fi"
         }
     ],
+    "scripts": {
+        "test": "pest"
+    },
     "minimum-stability": "dev",
     "require": {
-        "php": ">=7.1",
+        "php": ">=7.4",
         "firebase/php-jwt": "^5.4",
         "phpseclib/phpseclib": "^3.0"
+    },
+    "require-dev": {
+        "pestphp/pest": "1.x-dev"
     }
 }
