@@ -1,2 +1,4 @@
 /vendor
 /.idea
+/tests/resoruces/keys/*
+.phpunit.result.cache
