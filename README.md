@@ -73,6 +73,14 @@ if ($validator->getPublicKey()) {
 
 ## Tests
 
-Unit tests can be run with Pest:
+To run unit tests, you must create a private and public key pair with RSA-SHA 256 signature. Typically this can be done using the `openssl` command in your Terminal.
+
+    openssl rsa -in private.key -pubout -outform PEM -out public.key
+
+Once you've created your keys, put them in `/tests/resources/keys`. Don't change the names (private.key and public.key). The contents of this folder are ignored on git and should never be committed!
+
+The keys are a requirement for unit testing. We don't want to test against a live B2C account with Azure generated keys. We also don't have access to the private key there, which means we can't generate the signature anyway. Testing against an expired token doesn't get us too far.
+
+ Unit tests can be run with Pest:
 
     composer run test

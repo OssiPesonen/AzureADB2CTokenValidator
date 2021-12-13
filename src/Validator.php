@@ -44,7 +44,7 @@ class Validator implements ValidatorInterface
     /** @var File */
     private File $file;
 
-    public function __construct(string $tenant, string $policy, string $clientId, ?File $file)
+    public function __construct(string $tenant, string $policy, string $clientId, File $file = null)
     {
         $this->policy = $policy;
         $this->clientId = $clientId;
@@ -158,13 +158,13 @@ class Validator implements ValidatorInterface
         $keys = [];
         $discoveredKeys = $this->file->request($this->getDiscoveryUrl());
 
-        if (is_array($discoveredKeys->keys)) {
+        if (isset($discoveredKeys->keys) && ($discoveredKeys->keys)) {
             foreach ($discoveredKeys->keys as $key) {
                 $keys[$key->kid] = $key;
             }
         }
 
-        if ($keys[$kid]) {
+        if (isset($keys[$kid])) {
             $this->publicKey = new PublicKey((array)$keys[$kid]);
         }
 
@@ -214,22 +214,12 @@ class Validator implements ValidatorInterface
      *
      * @param array $tokenClaims
      * @throws InvalidClaimException
+     * @throws MissingResponseException
      */
     private function validateTokenClaims(array $tokenClaims)
     {
         if ($this->clientId !== $tokenClaims['aud']) {
             throw new InvalidClaimException('The client_id or audience is invalid');
-        }
-
-        // Additional validation is being performed in firebase/JWT itself
-        if ($tokenClaims['nbf'] > (time() - self::$leeway)) {
-            throw new InvalidClaimException('The id_token is not valid yet. Validity begins ' . date('Y-m-d H:i:s',
-                    $tokenClaims['nbf'] . '. Time now ' . date('Y-m-d H:i:s', time())));
-        }
-
-        if ($tokenClaims['exp'] < (time() + self::$leeway)) {
-            throw new InvalidClaimException('The id_token has expired. Token has expired at ' . date('Y-m-d H:i:s',
-                    $tokenClaims['exp'] . '. Time now ' . date('Y-m-d H:i:s', time())));
         }
 
         $tenant = $this->getTenantDetails($this->tenant);
@@ -250,7 +240,7 @@ class Validator implements ValidatorInterface
      */
     protected function getOpenIdConfiguration(string $tenant, string $version)
     {
-        if (!is_array($this->openIdConfiguration)) {
+        if (!isset($this->openIdConfiguration) || !is_array($this->openIdConfiguration)) {
             $this->openIdConfiguration = [];
         }
 
